@@ -1,14 +1,14 @@
 package com.example.testcode
 
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import android.util.Log
-import com.google.gson.Gson
-import java.io.IOException
-import java.util.concurrent.TimeUnit
+import io.reactivex.plugins.RxJavaPlugins
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -18,12 +18,16 @@ class MainActivity : AppCompatActivity() {
     private val TAG = MainActivity::class.java.simpleName
 
     private lateinit var mRecyclerView: RecyclerView
+    private lateinit var openDataViewModel: OpenDataViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        RxJavaPlugins.setErrorHandler { throwable: Throwable? -> Log.d(TAG, "onCreate: error")} // nothing or some logging
         initView()
-        connectOpenData()
+//        connectOpenData()
+//        connectOpenDataRX()
+        connectOpenDataRXQuery()
     }
 
     private fun initView() {
@@ -70,36 +74,35 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
 
-//        try {
-//            val request = Request.Builder()
-//                .url(OpenDataUtils.OPENDATA_URL)
-//                .build()
-//            val client = OkHttpClient.Builder()
-//                .connectTimeout(10000, TimeUnit.MILLISECONDS)
-//                .readTimeout(100000, TimeUnit.MILLISECONDS)
-//                .build()
-//            client.newCall(request).enqueue(object : Callback {
-//                override fun onFailure(call: Call, e: IOException) {
-//                    Log.d(TAG, e.toString())
-//                }
-//
-//                override fun onResponse(call: Call, response: Response) {
-//                    val resStr = response.body?.string()
-//                    val openDataList: List<OpenData> =
-//                        Gson().fromJson(resStr, Array<OpenData>::class.java).toList()
-//                    val openDataChooseList = mutableListOf<OpenData>()
-//                    for (i in 0 until 20) {
-//                        openDataChooseList.add(openDataList[i])
-//                    }
-//                    Log.d(TAG, "onResponse: openDataChooseList = $openDataChooseList")
-//                    this@MainActivity.runOnUiThread {
-//                        mRecyclerView.adapter = MainAdapter(openDataChooseList, applicationContext)
-//                    }
-//                }
-//            })
-//        } catch (e: Exception) {
-//            e.printStackTrace()
-//        }
+    private fun connectOpenDataRX() {
+        openDataViewModel = ViewModelProvider.AndroidViewModelFactory(application)
+            .create(OpenDataViewModel::class.java)
+        openDataViewModel.indexRX().observe(this, Observer {
+            val openDataChooseList = mutableListOf<OpenData>()
+            if (it != null) {
+                for (i in 0 until 20) {
+                    openDataChooseList.add(it[i])
+                }
+            }
+            Log.d(TAG, "onResponse: openDataChooseList = $openDataChooseList")
+            mRecyclerView.adapter = MainAdapter(openDataChooseList, applicationContext)
+        })
+    }
+
+    private fun connectOpenDataRXQuery() {
+        openDataViewModel = ViewModelProvider.AndroidViewModelFactory(application)
+            .create(OpenDataViewModel::class.java)
+        openDataViewModel.indexRXQuery("QcbUEzN6E6DL").observe(this, Observer {
+            val openDataChooseList = mutableListOf<OpenData>()
+            if (it != null) {
+                for (i in 0 until 20) {
+                    openDataChooseList.add(it[i])
+                }
+            }
+            Log.d(TAG, "onResponse: openDataChooseList = $openDataChooseList")
+            mRecyclerView.adapter = MainAdapter(openDataChooseList, applicationContext)
+        })
     }
 }
